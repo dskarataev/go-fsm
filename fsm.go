@@ -164,7 +164,7 @@ func (m *Machine) StateTransition(toState State) error {
 		if m.syncCallback {
 			// do not return the error
 			// this may be reconsidered
-			m.callback.StateTransitionCallback(toState)
+			return m.callback.StateTransitionCallback(toState)
 		} else {
 			// spin off the callback
 			go func() { m.callback.StateTransitionCallback(toState) }()
