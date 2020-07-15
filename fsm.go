@@ -13,7 +13,7 @@ import (
 )
 
 // Version is the semantic version (SemVer) string.
-const Version = "0.0.2"
+const Version = "0.1.1"
 
 // State is the machine state. It's really just a string.
 type State string
@@ -148,28 +148,30 @@ func (m *Machine) StateTransition(toState State) error {
 		return nil
 	}
 
-	// if we are not permitted to transition to this state...
-	if _, ok := m.transitions[m.state][toState]; !ok {
-		return newErrorStruct(fmt.Sprintf("transition from state %s to %s is not permitted", m.state, toState), ErrorTransitionNotPermitted)
-	}
-
 	// if the destination state was not defined...
 	if _, ok := m.transitions[toState]; !ok {
 		return newErrorStruct(fmt.Sprintf("state %s has not been registered", toState), ErrorStateUndefined)
 	}
 
-	m.state = toState
+	// if we are not permitted to transition to this state...
+	if _, ok := m.transitions[m.state][toState]; !ok && m.state != toState {
+		return newErrorStruct(fmt.Sprintf("transition from state %s to %s is not permitted", m.state, toState), ErrorTransitionNotPermitted)
+	}
 
 	if m.callback != nil {
 		if m.syncCallback {
-			// do not return the error
-			// this may be reconsidered
-			return m.callback.StateTransitionCallback(toState)
+			if err := m.callback.StateTransitionCallback(toState); err != nil {
+				return err
+			}
 		} else {
 			// spin off the callback
+			// do not return the error
+			// this may be reconsidered
 			go func() { m.callback.StateTransitionCallback(toState) }()
 		}
 	}
+
+	m.state = toState
 
 	return nil
 }
